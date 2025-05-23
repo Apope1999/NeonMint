@@ -9,15 +9,23 @@ export interface Props {
   all?: boolean;
 }
 
+type Post = {
+  slug: string;
+  title: { rendered: string };
+  date: string;
+  excerpt?: { rendered: string };
+  tags?: string[];
+  languages?: string[];
+  featured_media?: number;
+  link: string;
+};
+
 const { excludeLatest = false, currentPostUrl = "", all = false } = Astro.props;
 
-const allPosts = await Astro.glob("../../pages/blog/posts/*.md");
+const res = await fetch("https://animeportal.gr/wp-json/wp/v2/posts");
+const allPosts: Post[] = await res.json();
 // Sort by date in descending order (newest first)
-allPosts.sort((a, b) => {
-  const dateA = new Date(a.frontmatter.pubDate).getTime();
-  const dateB = new Date(b.frontmatter.pubDate).getTime();
-  return dateB - dateA;
-});
+allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 // Filter posts according to props
 let postsToShow = allPosts;
@@ -25,9 +33,9 @@ let postsToShow = allPosts;
 if (currentPostUrl) {
   // Exclude current post if its URL is provided
   postsToShow = postsToShow.filter((post) => {
-    if (!post.url) return false; // If no URL, keep the post
+    if (!post.link) return false; // If no URL, keep the post
     // Normalize URLs for comparison
-    const normalizedPostUrl = post.url.replace(/\/$/, ""); // Remove trailing slash if exists
+    const normalizedPostUrl = post.link.replace(/\/$/, ""); // Remove trailing slash if exists
     const normalizedCurrentUrl = currentPostUrl.replace(/\/$/, ""); // Remove trailing slash if exists
     return normalizedPostUrl !== normalizedCurrentUrl;
   });
@@ -57,12 +65,12 @@ if (!all) {
     {
       postsToShow.map((post) => (
         <BlogPost
-          url={post.url}
-          title={post.frontmatter.title}
-          date={post.frontmatter.pubDate}
-          tags={post.frontmatter.tags}
-          languages={post.frontmatter.languages}
-          image={post.frontmatter.image}
+          url={post.link}
+          title={post.title.rendered}
+          date={post.date}
+          tags={post.tags}
+          languages={post.languages}
+          image={undefined}
         />
       ))
     }
